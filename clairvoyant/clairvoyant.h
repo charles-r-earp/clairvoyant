@@ -1,4 +1,0 @@
-#ifndef CLAIRVOYANT_H
-#define CLAIRVOYANT_H
-
-#endif // CLAIRVOYANT_H
