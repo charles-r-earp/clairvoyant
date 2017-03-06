@@ -1,16 +1,41 @@
 #ifndef SEARCH_HPP
 #define SEARCH_HPP
 
-#include <functional>
+#include <iostream>
+#include <queue>
+#include <unordered_set>
 
-// A* Search of Graph
+#include "Graph.hpp"
 
 namespace cvt {
-
-    using EdgesForNodeCB = std::function<std::vector<&Edge>(&Node));
     
-    &Path search(Graph &graph, Node &start, Node &end, EdgesForNodeCB &nextEdges); // empty path on failure
+    template <typename Vertex> void breadth_first_search(Graph<Vertex> graph, Vertex start, Vertex goal) {
+    
+        std::queue<Vertex> frontier;
+        frontier.push(start);
+        
+        std::unordered_set<Vertex> visited;
+        visited.insert(start);
+        
+        while(!frontier.empty()) {
+            auto current = frontier.front();
+            frontier.pop();
+            
+            if (current == goal) {
+                break;
+            }
+            
+            std::cout << "Visiting " << current << std::endl;
+            for (auto next : graph.neighbors(current)) {
+                if (!visited.count(next)) {
+                    frontier.push(next);
+                    visited.insert(next);
+                }
+            }
+        }
+    }
+    
 }
 
 
-endif // SEARCH_HPP
+#endif // SEARCH_HPP
