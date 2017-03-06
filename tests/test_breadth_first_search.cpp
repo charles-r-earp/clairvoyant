@@ -1,6 +1,6 @@
-#include "clairvoyant.hpp"
+#include <clairvoyant.hpp>
 
-Graph<char> test_graph {{
+cvt::Graph<char> test_graph {{
     {'A', {'B'}},
     {'B', {'A', 'C', 'D'}},
     {'C', {'A'}},
@@ -9,5 +9,5 @@ Graph<char> test_graph {{
 }};
 
 int main() {
-  cvt::breadth_first_search(example_graph, 'A');
+    cvt::breadth_first_search(test_graph, 'A', 'C');
 }
