@@ -1,34 +1,23 @@
 #ifndef GRAPH_HPP
 #define GRAPH_HPP
 
-#include <stddef>
-#include <memory>
 #include <vector>
+#include <unordered_map>
 
 
 namespace cvt {
     
-    template <std::size_t D, typname T, typename P> class Graph {
+    // adapted from http://www.redblobgames.com/pathfinding/a-star/implementation.html
     
-        class Edge;
+    template <typename Vertex> struct Graph {
         
-        public: class Node {
-            
-            public: Vector<D, T> coord; // coordinates
-            
-            public: P pay; // payload 
-            
-            public: std::vector<Edge> edges;
-        };
+        using iterator = typename std::vector<Vertex>::iterator;
         
-        public: class Edge {
-            public: std::shared_ptr<Node> start, end;
-            
-            T cost;
+        std::unordered_map<Vertex, std::vector<Vertex> > edges;
+        
+        inline const std::vector<Vertex> neighbors(Vertex v) {
+            return this->edges[v];
         }
-        
-        
-        using Path = std::vector<Edge>;
     };
     
     
