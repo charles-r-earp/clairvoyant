@@ -21,11 +21,12 @@ namespace cvt {
             auto current = frontier.front();
             frontier.pop();
             
+            std::cout << "Visiting " << current << std::endl;
+            
             if (current == goal) {
                 break;
             }
             
-            std::cout << "Visiting " << current << std::endl;
             for (auto next : graph.neighbors(current)) {
                 if (!visited.count(next)) {
                     frontier.push(next);
