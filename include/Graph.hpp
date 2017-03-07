@@ -3,7 +3,9 @@
 
 #include <vector>
 #include <unordered_map>
+#include <map>
 #include <utility>
+#include <functional>
 
 
 namespace cvt {
@@ -24,6 +26,32 @@ namespace cvt {
             return this->edges[v];
         }
     };
+    
+    template <typename V, typename C, typename A> struct ActionGraph {
+    
+        using Vertex = V;
+        using Cost = C;
+        using Action = A;
+        
+        using Edge = std::tuple<Cost, Vertex, Action>;
+        
+        using iterator = typename std::vector<Edge>::iterator;
+        
+        std::map<Vertex, std::vector<Edge> > edges;
+        
+        using NeighborsCallBack = std::function<std::vector<Edge>(Vertex v)>;
+        
+        NeighborsCallBack neighbors_cb; 
+        
+        inline const sd::vector<Edge> neighbors(Vertex v) {
+            
+            if (!this->edges.count(v)) {
+                this->edges[v] = this->neighbors_cb(v);
+            }
+           
+            return this->edges[v];
+        }
+    }
     
     
 };
