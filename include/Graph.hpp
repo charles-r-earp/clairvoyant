@@ -3,19 +3,24 @@
 
 #include <vector>
 #include <unordered_map>
+#include <utility>
 
 
 namespace cvt {
     
     // adapted from http://www.redblobgames.com/pathfinding/a-star/implementation.html
     
-    template <typename Vertex> struct Graph {
+    template <typename V, typename C> struct StaticGraph {
         
-        using iterator = typename std::vector<Vertex>::iterator;
+        using Vertex = V;
+        using Cost = C;
+        using Edge = std::pair<Cost, Vertex>;
         
-        std::unordered_map<Vertex, std::vector<Vertex> > edges;
+        using iterator = typename std::vector<Edge>::iterator;
         
-        inline const std::vector<Vertex> neighbors(Vertex v) {
+        std::unordered_map<Vertex, std::vector<Edge> > edges;
+        
+        inline const std::vector<Edge> neighbors(Vertex v) {
             return this->edges[v];
         }
     };
