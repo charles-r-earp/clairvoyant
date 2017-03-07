@@ -9,8 +9,11 @@
 
 namespace cvt {
     
-    template <typename Vertex> void breadth_first_search(Graph<Vertex> graph, Vertex start, Vertex goal) {
+    template <typename Graph> void breadth_first_search(Graph graph, typename Graph::Vertex start, typename Graph::Vertex goal) {
     
+        using Vertex = typename Graph::Vertex;
+        using Edge = typename Graph::Edge;
+        
         std::queue<Vertex> frontier;
         frontier.push(start);
         
@@ -27,7 +30,10 @@ namespace cvt {
                 break;
             }
             
-            for (auto next : graph.neighbors(current)) {
+            for (auto next_edge : graph.neighbors(current)) {
+                
+                Vertex next = next_edge.second;
+                
                 if (!visited.count(next)) {
                     frontier.push(next);
                     visited.insert(next);
