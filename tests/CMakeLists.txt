@@ -1,3 +1,2 @@
-set(SOURCES test_breadth_first_search.cpp)
-
-add_executable(test_breadth_first_seach ${SOURCES})
+add_executable(test_breadth_first_seach test_breadth_first_search.cpp)
+add_executable(test_dynamic_graph test_dynamic_graph.cpp)
