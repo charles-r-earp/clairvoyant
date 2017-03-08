@@ -4,15 +4,24 @@
 #include <vector>
 #include <map>
 #include <utility>
+<<<<<<< HEAD
+=======
+#include <memory>
+>>>>>>> cbfb70bb3d4401b8cede278f40feeea1c4c96db6
 #include <functional>
 
 
 namespace cvt {
     
-    // adapted from http://www.redblobgames.com/pathfinding/a-star/implementation.html
+    // Vertices, edges, and costs constructed before searching
     
+<<<<<<< HEAD
     template <typename V, typename A> struct StaticGraph {
         
+=======
+    template <typename V, typename C> struct StaticGraph {
+        // adapted from http://www.redblobgames.com/pathfinding/a-star/implementation.html
+>>>>>>> cbfb70bb3d4401b8cede278f40feeea1c4c96db6
         using Vertex = V;
         using Action = A;
         using Edge = std::pair<Vertex, Action>;
@@ -55,6 +64,7 @@ namespace cvt {
         }
     };
     
+<<<<<<< HEAD
     template <typename Graph> struct DynamicGraph {
         
         using Vertex = typename Graph::Vertex;
@@ -110,7 +120,44 @@ namespace cvt {
         }
     }*/
     
+=======
+    // Vertices, edges, and costs created on demand
     
-};
+    template <typename V, typename C> struct DynamicGraph {
+        
+        using Vertex = V;
+        using Cost = C;
+        using Edge = std::pair<Cost, Vertex>;
+        
+        using iterator = typename std::vector<Edge>::iterator;
+        
+        /*class Delegate {
+            
+            public: virtual const std::vector<Edge> neighbors(Vertex v) = 0;
+        };*/
+        
+        using EdgesForVertexCB = std::function<std::vector<Edge>(Vertex)>;
+        
+        std::map<Vertex, std::vector<Edge> > edges;
+        
+        /*std::shared_ptr<Delegate> delegate;*/
+        
+        EdgesForVertexCB edges_cb;
+        
+        inline const std::vector<Edge> neighbors(Vertex v) {
+            
+            if (!this->edges.count(v)) {
+                
+                //this->edges[v] = this->delegate->neighbors(v);
+                this->edges[v] = this->edges_cb(v);
+            }
+            
+            return this->edges[v];
+        }
+    };
+        
+}
+>>>>>>> cbfb70bb3d4401b8cede278f40feeea1c4c96db6
+    
 
 #endif // GRAPH_HPP
