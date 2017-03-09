@@ -15,55 +15,60 @@
 namespace cvt {
     
     namespace graph {
+    
+        template <typename V> struct VertexGraph {
         
-        template <typename V, typename T, typename E> struct StaticGraph {
-
             using Vertex = V;
-            using Type = T;
-            using Extract = E;
+            using Type = V;
             
-            std::map<Vertex, std::vector<T> > connected;
-
+            std::map<Vertex, std::vector<Type> > connected;
+            
+            inline static Vertex vertex(const Type &t) {
+                return t;
+            }
+            
             inline const int count(const Vertex &v) {
                 return this->connected.count(v);
             }
 
-            inline std::vector<T> operator[](const Vertex &v) { 
+            inline std::vector<Type> operator[](const Vertex &v) { 
                 return this->connected[v];
             }
+        };
+        
+        template <typename V, typename E> struct EdgeGraph {
+        
+            using Vertex = V;
+            using Edge = E;
+            using Type = std::pair<Edge, Vertex>;
+            
+            std::map<Vertex, std::vector<Type> > connected;
+            
+            inline static Vertex vertex(const Type &t) {
+                return t.second;
+            }
+            
+            inline const int count(const Vertex &v) {
+                return this->connected.count(v);
+            }
 
-        };
-        
-        template <typename Vertex> struct VertexGraphExtract {
-            
-            static const Vertex vertex(const Vertex &v) {
-                return v;
+            inline std::vector<Type> operator[](const Vertex &v) { 
+                return this->connected[v];
             }
-            
         };
-    
-        template <typename Vertex> using VertexGraph = StaticGraph<Vertex, Vertex, VertexGraphExtract<Vertex> >;
-        
-        
-        template <typename Vertex, typename Edge> struct EdgeGraphExtract {
-            
-            static const Vertex vertex(const std::pair<Edge, Vertex> &p) {
-                return p.second;
-            }
-            
-        };
-    
-        template <typename Vertex, typename Edge> using EdgeGraph = StaticGraph<Vertex, std::pair<Edge, Vertex>, EdgeGraphExtract<Vertex, Edge> >;
         
 
         template <typename Graph, typename Callback> struct DynamicGraph {
 
             using Vertex = typename Graph::Vertex;
             using Type = typename Graph::Type;
-            using Extract = typename Graph::Extract;
 
             Graph graph;
             Callback callback;
+            
+            inline static Vertex vertex(const Type &t) {
+                return Graph::vertex(t);
+            }
             
             inline const int count(const Vertex &v) {
                 return this->graph.count(v);
@@ -126,7 +131,7 @@ namespace cvt {
                 
                 for (Type t : graph[current]) {
                     
-                    Vertex v = Graph::Extract::vertex(t);
+                    Vertex v = Graph::vertex(t);
                     Cost cost = cost_function(current, t);
                     
                     std::cout << "\tOpening: " << v << std::endl;
