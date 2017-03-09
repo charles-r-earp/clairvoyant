@@ -2,152 +2,167 @@
 #define GRAPH_HPP
 
 #include <vector>
+#include <queue>
 #include <map>
 #include <utility>
-#include <memory>
 #include <functional>
+#include <initializer_list>
+
+
+#include <iostream>
 
 
 namespace cvt {
     
-    // Vertices, edges, and costs constructed before searching
-    
-    template <typename V, typename A> struct StaticGraph {
+    namespace graph {
         
-    template <typename V, typename C> struct StaticGraph {
-        // adapted from http://www.redblobgames.com/pathfinding/a-star/implementation.html
+        template <typename V, typename T, typename E> struct StaticGraph {
 
-        using Vertex = V;
-        using Action = A;
-        using Edge = std::pair<Vertex, Action>;
-        
-        using iterator = typename std::vector<Edge>::iterator;
-        
-        std::map<Vertex, std::vector<Edge> > edges;
-        
-        inline static Vertex extract(Edge e) {
-            return e.first;
-        }
-        
-        inline const int count(Vertex v) const {
-            return this->edges(v);
-        }
-        
-        inline std::vector<Edge> operator[](Vertex v) {
-            return this->edges[v];
-        }
-    };
-    
-    template <typename V> struct SimpleGraph {
-        using Vertex = V;
-        using Edge = Vertex;
-        
-        using iterator = typename std::vector<Edge>::iterator;
-        
-        std::map<Vertex, std::vector<Edge> > edges;
-        
-        inline static Vertex extract(Edge e) {
-            return e;
-        }
-        
-        inline const int count(Vertex v) const {
-            return this->edges(v);
-        }
-        
-        inline std::vector<Edge> operator[](Vertex v) {
-            return this->edges[v];
-        }
-    };
-    
-    template <typename Graph> struct DynamicGraph {
-        
-        using Vertex = typename Graph::Vertex;
-        using Edge = typename Graph::Edge;
-        
-        using NeighborsCallBack = std::function<std::vector<Edge>(Vertex)>;
-        
-        Graph graph;
-        
-        NeighborsCallBack neighbors_cb;
-        
-        inline static Vertex extract(Edge e) {
-            return e.first;
-        }
-        
-        const int count(Vertex v) const {
-            return this->graph.count(v);
-        }
-        
-        inline std::vector<Edge> operator[](Vertex v) {
+            using Vertex = V;
+            using Type = T;
+            using Extract = E;
             
-            if (!this->graph.count(v)) {
-                this->graph[v] = this->neighbors_cb(v);
+            std::map<Vertex, std::vector<T> > connected;
+
+            inline const int count(const Vertex &v) {
+                return this->connected.count(v);
+            }
+
+            inline std::vector<T> operator[](const Vertex &v) { 
+                return this->connected[v];
+            }
+
+        };
+        
+        template <typename Vertex> struct VertexGraphExtract {
+            
+            static const Vertex vertex(const Vertex &v) {
+                return v;
             }
             
-            return this->graph[v];
-        }
-    };
+        };
     
-   /* template <typename V, typename C, typename A> struct ActionGraph {
-    
-        using Vertex = V;
-        using Cost = C;
-        using Action = A;
+        template <typename Vertex> using VertexGraph = StaticGraph<Vertex, Vertex, VertexGraphExtract<Vertex> >;
         
-        using Edge = std::tuple<Cost, Vertex, Action>;
         
-        using iterator = typename std::vector<Edge>::iterator;
-        
-        std::map<Vertex, std::vector<Edge> > edges;
-        
-        using NeighborsCallBack = std::function<std::vector<Edge>(Vertex v)>;
-        
-        NeighborsCallBack neighbors_cb; 
-        
-        inline const sd::vector<Edge> neighbors(Vertex v) {
+        template <typename Vertex, typename Edge> struct EdgeGraphExtract {
             
-            if (!this->edges.count(v)) {
-                this->edges[v] = this->neighbors_cb(v);
+            static const Vertex vertex(const std::pair<Edge, Vertex> &p) {
+                return p.second;
             }
-           
-            return this->edges[v];
-        }
-    }*/
-    
-    // Vertices, edges, and costs created on demand
-    
-    template <typename V, typename C> struct DynamicGraph {
-        
-        using Vertex = V;
-        using Cost = C;
-        using Edge = std::pair<Cost, Vertex>;
-        
-        using iterator = typename std::vector<Edge>::iterator;
-        
-        /*class Delegate {
             
-            public: virtual const std::vector<Edge> neighbors(Vertex v) = 0;
-        };*/
+        };
+    
+        template <typename Vertex, typename Edge> using EdgeGraph = StaticGraph<Vertex, std::pair<Edge, Vertex>, EdgeGraphExtract<Vertex, Edge> >;
         
-        using EdgesForVertexCB = std::function<std::vector<Edge>(Vertex)>;
-        
-        std::map<Vertex, std::vector<Edge> > edges;
-        
-        /*std::shared_ptr<Delegate> delegate;*/
-        
-        EdgesForVertexCB edges_cb;
-        
-        inline const std::vector<Edge> neighbors(Vertex v) {
+
+        template <typename Graph, typename Callback> struct DynamicGraph {
+
+            using Vertex = typename Graph::Vertex;
+            using Type = typename Graph::Type;
+            using Extract = typename Graph::Extract;
+
+            Graph graph;
+            Callback callback;
             
-            if (!this->edges.count(v)) {
+            inline const int count(const Vertex &v) {
+                return this->graph.count(v);
+            }
+
+            inline std::vector<Type> operator[](const Vertex &v) { 
+
+                if (!this->count(v)) {
+                    this->graph[v] = this->callback(v);
+                }
+
+                return this->graph[v];
+            }
+
+        };
+        
+        // search
+        
+        template <typename Graph, typename Cost = int> 
+        std::vector<typename Graph::Type> search(Graph graph, 
+               const typename Graph::Vertex &start, 
+               std::function<bool(typename Graph::Vertex)> completed = [](typename Graph::Vertex v) { return false; },
+               std::function<Cost(typename Graph::Vertex, typename Graph::Type)> cost_function 
+                                                 = [](typename Graph::Vertex v, typename Graph::Type t) { return 1; },
+               std::function<Cost(typename Graph::Vertex)> cost_heuristic = [](typename Graph::Vertex v) { return 0; }) {
+            
+            using Vertex = typename Graph::Vertex;
+            using Type = typename Graph::Type;
+            using Node = std::pair<Cost, Type>;
+            
+            
+            // construct containers
+            
+            std::priority_queue<Node, std::vector<Node>, std::greater<Node>> frontier;
+            std::map<Vertex, std::pair<Vertex, Type> > visited;
+            std::map<Vertex, Cost> cost_map;
+            
+            // initialize
+            
+            Vertex current = start;
+            Cost zero;
+            //frontier.push(std::make_pair(zero, current));
+            //cost_map[current] = zero;
+            
+            bool init = false;
+            
+            do {
+                if (init) {
+                    current = frontier.top().second;
+                    frontier.pop();
+                }
                 
-                //this->edges[v] = this->delegate->neighbors(v);
-                this->edges[v] = this->edges_cb(v);
+                init = true;
+                
+                std::cout << "Visiting: " << current << std::endl;
+                
+                if (completed(current)) {
+                    break;
+                }
+                
+                for (Type t : graph[current]) {
+                    
+                    Vertex v = Graph::Extract::vertex(t);
+                    Cost cost = cost_function(current, t);
+                    
+                    std::cout << "\tOpening: " << v << std::endl;
+                    
+                    if (!cost_map.count(v) || cost < cost_map.at(v)) {
+                        
+                        Cost heuristic = cost_heuristic(v);
+                        
+                        frontier.push(std::make_pair(cost + heuristic, v));
+                        visited[v] = std::make_pair(current, t);
+                        cost_map[v] = cost;
+                    }
+                    
+                }
+                
+                
+            } while(!frontier.empty());
+            
+            std::vector<typename Graph::Type> path;
+            
+            while (current != start) {
+                
+                std::cout << "Reconstructing: " << current << std::endl;
+                
+                std::pair<Vertex, Type> pair = visited.at(current);
+                
+                path.push_back(pair.second);
+                
+                current = pair.first;
             }
             
-            return this->edges[v];
+            return path;
         }
-    };
+            
+                                         
+    }
         
 }
     
