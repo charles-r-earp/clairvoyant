@@ -15,7 +15,7 @@
 namespace cvt {
     
     namespace graph {
-    
+        
         template <typename V> struct VertexGraph {
         
             using Vertex = V;

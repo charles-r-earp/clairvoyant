@@ -1,5 +1,6 @@
 #include <array>
 #include <functional>
+#include <utility>
 
 
 
@@ -7,17 +8,20 @@ namespace cvt {
     
     namespace model {
         
-        template<typename T, typename I, typename O> struct AbstractModel {
+        template<typename IT, typename OT> struct Model {
+
+            using Input = IT;
+            using Output = OT;
             
-            using Type = T;
-            using Inputs = I;
-            using Outputs = O;
-            
-            const std::function<std::array<Type, Outputs>(const std::array<Type, Inputs> inputs)> function;
-            
-            inline const std::array<Type, Outputs> operator(const std::array<Type, Inputs> inputs) {
-                this->function(inputs);
+            inline const Output operator()(const Input&) {
+                return this->function(Input);
             }
-        }
+            
+            // Implementation
+            
+            std::function<Output(const Input&)> function;
+            
+        }; 
+        
     }
 }
