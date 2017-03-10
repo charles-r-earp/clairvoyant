@@ -7,7 +7,7 @@ namespace cvt {
     
     namespace neural {
         
-        
+        /*
         
         template<typename T, int I, int O> Network {
             
@@ -41,7 +41,7 @@ namespace cvt {
             inline const Output operator()(const Input&) {
                 return this->network(Input);
             }
-        }
+        }*/
         
     }
 }

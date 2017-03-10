@@ -85,6 +85,12 @@ namespace cvt {
 
         };
         
+        // rebase
+        
+        template<typename Graph> void rebase(Graph &graph, typename Graph::Vertex base) {
+            // trims edges not reachable from base
+        }
+        
         // search
         
         template <typename Graph, typename Cost = int> 
