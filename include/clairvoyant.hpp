@@ -6,12 +6,13 @@
 //#include "neural.hpp"
 
 namespace cvt {
-/*
+
     template<typename G, typename C> struct Clairvoyant { 
         
         using Graph = G;
         
         using State = typename Graph::Vertex;
+        using Action = typename Graph::Edge;
         using Type = typename Graph::Type;
         using Cost = C;
         
@@ -23,7 +24,7 @@ namespace cvt {
         inline const Action best(const State &search_from) {
             std::vector< Type > path = search(graph, search_from, completed, cost_function, cost_heuristic);
             
-            return path.front().first;
+            return Graph::edge(path.front());
         }
         
         inline void update(const State &new_state) {
@@ -31,7 +32,7 @@ namespace cvt {
             graph::rebase(this->graph, new_state);
         }
         
-    };*/
+    };
 }
 
 

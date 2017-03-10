@@ -5,6 +5,7 @@
 #include <queue>
 #include <map>
 #include <utility>
+#include <tuple>
 #include <functional>
 #include <initializer_list>
 
@@ -19,11 +20,16 @@ namespace cvt {
         template <typename V> struct VertexGraph {
         
             using Vertex = V;
+            using Edge = V;
             using Type = V;
             
             std::map<Vertex, std::vector<Type> > connected;
             
             inline static Vertex vertex(const Type &t) {
+                return t;
+            }
+            
+            inline static Vertex edge(const Type &t) {
                 return t;
             }
             
@@ -48,6 +54,10 @@ namespace cvt {
                 return t.second;
             }
             
+            inline static Vertex edge(const Type &t) {
+                return t.first;
+            }
+            
             inline const int count(const Vertex &v) {
                 return this->connected.count(v);
             }
@@ -68,6 +78,10 @@ namespace cvt {
             
             inline static Vertex vertex(const Type &t) {
                 return Graph::vertex(t);
+            }
+            
+            inline static Vertex edge(const Type &t) {
+                return Graph::edge(t);
             }
             
             inline const int count(const Vertex &v) {
