@@ -1,5 +1,5 @@
 #include <clairvoyant.hpp>
-
+#if false
 cvt::graph::VertexGraph<char> vertex_graph { {
         {'A', {'B'} },
         {'B', {'A','C','D'} },
@@ -16,9 +16,12 @@ cvt::graph::EdgeGraph<char, int> edge_graph {{
     {'E', {{1, 'B'}} }
 }};
 
+#endif
+
 int main() {
     
-    cvt::graph::search(vertex_graph, 'A');
+   // cvt::graph::search(vertex_graph, 'A');
     
     return 0;
 }
+

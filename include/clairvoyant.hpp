@@ -7,23 +7,24 @@
 
 namespace cvt {
 
-    template<typename G, typename C> struct Clairvoyant { 
+    template<typename G> struct Clairvoyant { 
         
         using Graph = G;
         
         using State = typename Graph::Vertex;
         using Action = typename Graph::Edge;
         using Type = typename Graph::Type;
-        using Cost = C;
         
         Graph graph;
-        std::function<bool(State)> completed;
-        std::function<Cost(State, Type)> cost_function;
-        std::function<Cost(State)> cost_heuristic;
         
-        inline const Action best(const State &search_from) {
+        template<typename Completed, typename CostFunction, typename CostHeuristic>
+            inline const Action best(const State &search_from, 
+                                     Completed completed = [](typename Graph::Vertex v) { return false; },
+                                     CostFunction cost_function = [](typename Graph::Vertex v, typename Graph::Type t) { return 1; },
+                                     CostHeuristic cost_heuristic = [](typename Graph::Vertex v) { return 0; })) {
+            std::cout << "2.1";
             std::vector< Type > path = search(graph, search_from, completed, cost_function, cost_heuristic);
-            
+            std::cout << "2.2";
             return Graph::edge(path.front());
         }
         

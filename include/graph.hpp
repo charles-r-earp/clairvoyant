@@ -12,7 +12,6 @@
 
 #include <iostream>
 
-
 namespace cvt {
     
     namespace graph {
@@ -54,7 +53,7 @@ namespace cvt {
                 return t.second;
             }
             
-            inline static Vertex edge(const Type &t) {
+            inline static Edge edge(const Type &t) {
                 return t.first;
             }
             
@@ -68,9 +67,13 @@ namespace cvt {
         };
         
 
-        template <typename Graph, typename Callback> struct DynamicGraph {
+        template <typename G, typename C> struct DynamicGraph {
 
+            using Graph = G;
+            using Callback = C;
+            
             using Vertex = typename Graph::Vertex;
+            using Edge = typename Graph::Edge;
             using Type = typename Graph::Type;
 
             Graph graph;
@@ -80,7 +83,7 @@ namespace cvt {
                 return Graph::vertex(t);
             }
             
-            inline static Vertex edge(const Type &t) {
+            inline static Edge edge(const Type &t) {
                 return Graph::edge(t);
             }
             
@@ -89,9 +92,11 @@ namespace cvt {
             }
 
             inline std::vector<Type> operator[](const Vertex &v) { 
-
+                std::cout << "10";
                 if (!this->count(v)) {
+                    std::cout << "10-a";
                     this->graph[v] = this->callback(v);
+                    std::cout << "10-b";
                 }
 
                 return this->graph[v];
@@ -107,13 +112,12 @@ namespace cvt {
         
         // search
         
-        template <typename Graph, typename Cost = int> 
+        template <typename Graph, typename Cost = int, typename Completed, typename CostFunction, typename CostHeuristic> 
         std::vector<typename Graph::Type> search(Graph graph, 
                const typename Graph::Vertex &start, 
-               std::function<bool(typename Graph::Vertex)> completed = [](typename Graph::Vertex v) { return false; },
-               std::function<Cost(typename Graph::Vertex, typename Graph::Type)> cost_function 
-                                                 = [](typename Graph::Vertex v, typename Graph::Type t) { return 1; },
-               std::function<Cost(typename Graph::Vertex)> cost_heuristic = [](typename Graph::Vertex v) { return 0; }) {
+               Completed completed = [](typename Graph::Vertex v) { return false; },
+               CostFunction cost_function = [](typename Graph::Vertex v, typename Graph::Type t) { return 1; },
+               CostHeuristic cost_heuristic = [](typename Graph::Vertex v) { return 0; }) {
             
             using Vertex = typename Graph::Vertex;
             using Type = typename Graph::Type;
@@ -130,37 +134,44 @@ namespace cvt {
             
             Vertex current = start;
             Cost zero;
-            //frontier.push(std::make_pair(zero, current));
-            //cost_map[current] = zero;
             
             bool init = false;
             
+            std::cout << "Searching...";
+            
             do {
                 if (init) {
-                    current = frontier.top().second;
+                    current = Graph::vertex(frontier.top().second);
                     frontier.pop();
                 }
                 
                 init = true;
                 
-                std::cout << "Visiting: " << current << std::endl;
+                //std::cout << "Visiting: " << current << std::endl;
                 
+                std::cout << "Visit";
+                
+                /*
                 if (completed(current)) {
                     break;
-                }
+                }*/
+                
+                std::cout << "3.1";
                 
                 for (Type t : graph[current]) {
                     
                     Vertex v = Graph::vertex(t);
                     Cost cost = cost_function(current, t);
                     
-                    std::cout << "\tOpening: " << v << std::endl;
+                    std::cout << "Open";
+                    
+                    //std::cout << "\tOpening: " << v << std::endl;
                     
                     if (!cost_map.count(v) || cost < cost_map.at(v)) {
                         
                         Cost heuristic = cost_heuristic(v);
                         
-                        frontier.push(std::make_pair(cost + heuristic, v));
+                        frontier.push(std::make_pair(cost + heuristic, t));
                         visited[v] = std::make_pair(current, t);
                         cost_map[v] = cost;
                     }
@@ -172,9 +183,9 @@ namespace cvt {
             
             std::vector<typename Graph::Type> path;
             
-            while (current != start) {
+            while (current < start != start < current) {
                 
-                std::cout << "Reconstructing: " << current << std::endl;
+               // std::cout << "Reconstructing: " << current << std::endl;
                 
                 std::pair<Vertex, Type> pair = visited.at(current);
                 
