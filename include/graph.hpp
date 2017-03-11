@@ -9,12 +9,184 @@
 #include <functional>
 #include <initializer_list>
 
+#include <lambda>
 
 #include <iostream>
 
 namespace cvt {
     
+    template<typename T> bool same(T a, T b) {
+        return a < b == b < a;
+    }
+    
+    template<typename V, typename E> struct graph {
+            
+        using Vertex = V;
+        using Edge = E; 
+        using Connection = std::pair<Edge, Vertex>;
+        
+        std::map<Vertex, std::vector<Connection> > connections;
+        
+        inline std::vector<Connection> operator[](const Vertex &v) {
+            return this->connections[v];
+        }
+    };
+    
+    template<typename V> struct vertex_graph {
+        
+        using Vertex = V;
+        using Edge = std::pair<Vertex, Vertex>;
+        using Connection = std::pair<Edge, Vertex>;
+        
+        std::map<Vertex, std::vector<Vertex> > connected_vertices;
+        
+        inline std::vector<Connection> operator[](const Vertex &v) { 
+            std::vector<Connection> connections;
+            for (auto next : this->connected_vertices[v]) {
+                connections.push_back(std::make_pair(std::make_pair(v, next), next) );
+            }
+            return connections;
+        }
+    };
+    
+    template<typename V, typename E> struct dynamic_graph {
+        
+        using Vertex = V;
+        using Edge = E;
+        using Connection = typename graph<Vertex, Edge>::Connection;
+        
+        graph<Vertex, Edge> storage;
+        lambda::lambda<std::vector<Connection>(Vertex)> callback;
+        
+        inline std::vector<Connection> operator[](const Vertex &v) {
+            
+            if (!this->storage.count(v)) {
+                this->storage[v] = this->callback(v);
+            }
+            
+            return this->connections[v];
+        }
+    };
+    
+    template<typename V, typename E = typename vertex_graph<V>::Edge, typename C = int> struct graph_search {
+        
+        using Vertex = V;
+        using Edge = E;
+        using Cost = C;
+        
+        lambda::lambda<bool(Vertex)> completed = [](Vertex)->bool{ return false; };
+        lambda::lambda<Cost(Edge)> edge_cost = [](Edge)->Cost{ return 1; };
+        lambda::lambda<Cost(Vertex)> heuristic_cost = [](Vertex)->Cost{ return 0; };
+        
+        
+        template<class Graph> auto min_cost_path(Graph graph, Vertex start) -> std::vector<typename Graph::Connection> {
+            return search(graph, start, completed, edge_cost, heuristic_cost);
+        }
+        
+        inline const void set_goal(Vertex goal) {
+            this->completed = [goal](Vertex v) { return same(v, goal); };
+        }
+        
+    };
+    
+    template<class Graph, typename Cost = int> 
+       auto search(Graph graph, 
+               typename Graph::Vertex start, 
+               lambda::lambda<bool(typename Graph::Vertex)> completed,
+               lambda::lambda<Cost(typename Graph::Edge)> edge_cost = [](typename Graph::Edge)->Cost{ return 1; },
+               lambda::lambda<Cost(typename Graph::Vertex)> heuristic_cost = [](typename Graph::Vertex)->Cost{ return 0; }
+                ) -> std::vector<typename Graph::Connection> {
+    
+        using Vertex = typename Graph::Vertex;
+        using Edge = typename Graph::Edge;
+        using Connection = typename Graph::Connection;
+        using Node = std::pair<Cost, Connection>;
+            
+            
+        // construct containers
+            
+        std::priority_queue<Node, std::vector<Node>, std::greater<Node> > frontier;
+        std::map<Vertex, std::pair<Vertex, Edge> > visited;
+        std::map<Vertex, Cost> cost_map;
+            
+        // initialize
+            
+        Vertex current = start;
+            
+        bool init = false;
+            
+        //std::cout << "Searching...";
+            
+        do {
+            if (init) {
+                current = frontier.top().second.second;
+                frontier.pop();
+            }
+                
+            init = true;
+                
+            //std::cout << "Visiting: " << current << std::endl;
+                
+          //  std::cout << "Visit";
+                
+            
+            if (completed(current)) {
+                break;
+            }
+                
+        //    std::cout << "3.1";
+                
+            for (Connection connection : graph[current]) {
+                    
+                Edge e = connection.first;
+                Cost cost = edge_cost(e);
+                Vertex v = connection.second;
+                
+          //      std::cout << "Open";
+                    
+                //std::cout << "\tOpening: " << v << std::endl;
+                
+                if (!cost_map.count(v) || cost < cost_map.at(v)) {
+                        
+                    Cost heuristic = heuristic_cost(v);
+                        
+                    frontier.push(std::make_pair(cost + heuristic, connection));
+                    visited[v] = std::make_pair(current, e);
+                    cost_map[v] = cost;
+                }
+                    
+            }
+                
+                
+        } while(!frontier.empty());
+            
+        std::vector<Connection> path;
+            
+        while (!same(current, start)) {
+                
+           // std::cout << "Reconstructing: " << current << std::endl;
+                
+            auto pair = visited.at(current);
+                
+            path.push_back(std::make_pair(pair.second, current) );
+                
+            current = pair.first;
+        }
+        
+        std::reverse(path.begin(), path.end());
+            
+        return path;
+         
+    }
+    
+    
+    
+    
+    
+   #if false 
     namespace graph {
+        
+        
         
         template <typename V> struct VertexGraph {
         
@@ -149,21 +321,21 @@ namespace cvt {
                 
                 //std::cout << "Visiting: " << current << std::endl;
                 
-                std::cout << "Visit";
+                //std::cout << "Visit";
                 
                 /*
                 if (completed(current)) {
                     break;
                 }*/
                 
-                std::cout << "3.1";
+                //std::cout << "3.1";
                 
                 for (Type t : graph[current]) {
                     
                     Vertex v = Graph::vertex(t);
                     Cost cost = cost_function(current, t);
                     
-                    std::cout << "Open";
+                    //std::cout << "Open";
                     
                     //std::cout << "\tOpening: " << v << std::endl;
                     
@@ -199,6 +371,8 @@ namespace cvt {
             
                                          
     }
+    
+    #endif
         
 }
     

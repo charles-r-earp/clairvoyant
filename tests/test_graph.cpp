@@ -1,6 +1,6 @@
-#include <clairvoyant.hpp>
-#if false
-cvt::graph::VertexGraph<char> vertex_graph { {
+#include <graph.hpp>
+
+cvt::vertex_graph<char> graph1 { {
         {'A', {'B'} },
         {'B', {'A','C','D'} },
         {'C', {'A'} },
@@ -8,7 +8,7 @@ cvt::graph::VertexGraph<char> vertex_graph { {
         {'E', {'B'} }, 
 }};
 
-cvt::graph::EdgeGraph<char, int> edge_graph {{
+cvt::graph<char, int> graph2 {{
     {'A', {{1,'B'}} },
     {'B', {{1, 'A'}, {1, 'C'}, {1, 'D'}} },
     {'C', {{1,'A'}} },
@@ -16,11 +16,19 @@ cvt::graph::EdgeGraph<char, int> edge_graph {{
     {'E', {{1, 'B'}} }
 }};
 
-#endif
-
 int main() {
     
-   // cvt::graph::search(vertex_graph, 'A');
+    cvt::graph_search<char> search;
+    search.set_goal('A');
+    
+    for (auto connection : search.min_cost_path(graph1, 'E')) {
+        std::cout << connection.first.first << " -> " << connection.first.second << std::endl;
+        //std::cout << " -[ " << connection.first << " ]-> " << connection.second;
+    }
+    
+    std::cout << std::endl;
+    
+    
     
     return 0;
 }
