@@ -1,10 +1,12 @@
 #ifndef CLAIRVOYANT_HPP
 #define CLAIRVOYANT_HPP
 
-#include "graph.hpp"
-#include "model.hpp"
-//#include "neural.hpp"
+//#include <lambda/lambda>
 
+//#include "graph.hpp"
+//#include "model.hpp"
+//#include "neural.hpp"
+/*
 namespace cvt {
 
     template<typename G> struct Clairvoyant { 
@@ -34,7 +36,7 @@ namespace cvt {
         }
         
     };
-}
+}*/
 
 
 #endif // CLAIRVOYANT_H
