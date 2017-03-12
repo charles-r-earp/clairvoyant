@@ -13,4 +13,4 @@ find_package(lambda CONFIG REQUIRED COMPONENTS lambda)
 include_directories(include ${lambda_INCLUDE_DIRS})
 
 add_subdirectory(tests)
-#add_subdirectory(examples)
+add_subdirectory(examples)

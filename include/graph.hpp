@@ -27,6 +27,10 @@ namespace cvt {
         
         std::map<Vertex, std::vector<Connection> > connections;
         
+        inline std::size_t count(const Vertex& v) const {
+            return this->connections.count(v);
+        }
+        
         inline std::vector<Connection> operator[](const Vertex &v) {
             return this->connections[v];
         }
@@ -39,6 +43,10 @@ namespace cvt {
         using Connection = std::pair<Edge, Vertex>;
         
         std::map<Vertex, std::vector<Vertex> > connected_vertices;
+        
+        inline std::size_t count(const Vertex& v) const {
+            return this->connected_vertices.count(v);
+        }
         
         inline std::vector<Connection> operator[](const Vertex &v) { 
             std::vector<Connection> connections;
@@ -58,13 +66,17 @@ namespace cvt {
         graph<Vertex, Edge> storage;
         lambda::lambda<std::vector<Connection>(Vertex)> callback;
         
+        inline std::size_t count(const Vertex& v) const {
+            return this->storage.count(v);
+        }
+        
         inline std::vector<Connection> operator[](const Vertex &v) {
             
-            if (!this->storage.count(v)) {
+            if (!this->count(v)) {
                 this->storage[v] = this->callback(v);
             }
             
-            return this->connections[v];
+            return this->storage[v];
         }
     };
     
@@ -74,21 +86,86 @@ namespace cvt {
         using Edge = E;
         using Cost = C;
         
-        lambda::lambda<bool(Vertex)> completed = [](Vertex)->bool{ return false; };
-        lambda::lambda<Cost(Edge)> edge_cost = [](Edge)->Cost{ return 1; };
-        lambda::lambda<Cost(Vertex)> heuristic_cost = [](Vertex)->Cost{ return 0; };
+        lambda::lambda<bool(const Vertex&)> completed = [](const Vertex&)->bool{ return false; };
+        lambda::lambda<Cost(const Edge&)> edge_cost = [](const Edge&)->Cost{ return 1; };
+        lambda::lambda<Cost(const Vertex&)> heuristic_cost = [](const Vertex&)->Cost{ return 0; };
         
-        
-        template<class Graph> auto min_cost_path(Graph graph, Vertex start) -> std::vector<typename Graph::Connection> {
-            return search(graph, start, completed, edge_cost, heuristic_cost);
+        template<class Graph> std::vector<typename Graph::Connection> min_cost_path(Graph graph, const Vertex &start) const {
+            using Vertex = typename Graph::Vertex;
+            using Edge = typename Graph::Edge;
+            using Connection = typename Graph::Connection;
+            using Node = std::pair<Cost, Connection>;
+            
+            // construct containers
+            
+            std::priority_queue<Node, std::vector<Node>, std::greater<Node> > frontier;
+            std::map<Vertex, std::pair<Vertex, Edge> > visited;
+            std::map<Vertex, Cost> cost_map;
+
+            // initialize
+
+            Vertex current = start;
+
+            bool init = false;
+
+            do {
+                if (init) {
+                    current = frontier.top().second.second;
+                    frontier.pop();
+                }
+
+                init = true;
+
+                
+                /*if (this->completed(current)) {
+                    break;
+                }*/
+
+                for (Connection connection : graph[current]) {
+
+                    Edge e = connection.first;
+                    Cost cost;// = this->edge_cost(e);
+                    Vertex v = connection.second;
+
+                    if (!cost_map.count(v) || cost < cost_map.at(v)) {
+
+                        Cost heuristic;// = this->heuristic_cost(v);
+                        frontier.push(std::make_pair(cost + heuristic, connection));
+                        visited[v] = std::make_pair(current, e);
+                        cost_map[v] = cost;
+                    }
+
+                }
+
+
+            } while(!frontier.empty());
+
+            std::vector<Connection> path;
+
+            while (!same(current, start)) {
+
+                auto pair = visited.at(current);
+
+                path.push_back(std::make_pair(pair.second, current) );
+
+                current = pair.first;
+            }
+
+            std::reverse(path.begin(), path.end());
+
+            return path;
         }
-        
-        inline const void set_goal(Vertex goal) {
+
+        inline void set_goal(const Vertex &goal) {
             this->completed = [goal](Vertex v) { return same(v, goal); };
         }
-        
+
+        inline void  set_fixed_edge_cost(const Cost &cost) {
+            this->edge_cost = [cost](Edge)->Cost{ return cost; };
+        }               
     };
     
+    /*
     template<class Graph, typename Cost = int> 
        auto search(Graph graph, 
                typename Graph::Vertex start, 
@@ -177,7 +254,7 @@ namespace cvt {
             
         return path;
          
-    }
+    }*/
     
     
     

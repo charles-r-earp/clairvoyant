@@ -138,72 +138,55 @@ bool operator<(const TicTacToe::Board &a, const TicTacToe::Board &b) {
 }
 
 
-struct AI {
+class AI {
     
-    using EdgeGraph = cvt::graph::EdgeGraph<TicTacToe::Board, TicTacToe::Move>;
-    using Callback = std::function<std::vector<std::pair<TicTacToe::Move, TicTacToe::Board> >(TicTacToe::Board)>;
-    using DynamicGraph = cvt::graph::DynamicGraph<EdgeGraph, Callback>;
+    using Board = TicTacToe::Board;
+    using Move = TicTacToe::Move;
     using Cost = int;
-    using Clairvoyant = cvt::Clairvoyant<DynamicGraph, Cost>;
     
-    Clairvoyant clairvoyant;
-    TicTacToe::Player player;
+    cvt::clairvoyant<cvt::dynamic_graph<Board, Move>, Cost> clair;
     
-    //DynamicGraph::Callback callback;
-    
-    AI (TicTacToe::Player player) {
+    public: AI() {
         
-        this->player = player;
-
-        auto callback = [](TicTacToe::Board board) { 
+        this->clair.graph.callback = [](const Board &board){ 
             
-            std::cout << "1";
+            auto moves = TicTacToe::legal_moves(board);
+            std::vector<std::pair<Move, Board> > connections; 
             
-            std::vector<std::pair<TicTacToe::Move, TicTacToe::Board> > moves;
-            for (auto move : TicTacToe::legal_moves(board)) {
-                moves.push_back(std::make_pair(move, TicTacToe::make_move(board, move)));
+            for (auto move : moves) {
+                connections.push_back(std::make_pair(move, TicTacToe::make_move(board, move)) );
             }
             
-            return moves;
+            return connections;
         };
-        
-        
-        DynamicGraph graph = { EdgeGraph(), callback };
-        
-        Clairvoyant clairvoyant;
-        clairvoyant.graph = graph;
-        
-        graph[TicTacToe::Board()];
     }
     
-    TicTacToe::Move next_move(const TicTacToe::Board &board) {
-        std::cout << "5";
-        clairvoyant.update(board);
-        std::cout << "5.1";
-        
-        TicTacToe::Player player = this->player;
-        
-        auto completed = [player](TicTacToe::Board board){ 
-            std::cout << "2";
-            return TicTacToe::status(board) == TicTacToe::Status::Winner && TicTacToe::winner(board) == player;
-        };
-        
-        auto cost_function = [](TicTacToe::Board board, typename DynamicGraph::Type t) -> Cost { std::cout << "3"; return 0; };
-        
-        auto cost_heuristic = [player](TicTacToe::Board board) -> Cost {
-            std::cout << "4";
-            if (TicTacToe::status(board) == TicTacToe::Status::Winner) {
-                if (TicTacToe::winner(board) == player) {
-                    return -1;
-                } else return 1;
-            }
+    public: TicTacToe::Move best_move(const TicTacToe::Board &current_board) {
+        cvt::graph_search<TicTacToe::Board, TicTacToe::Move, Cost> search;
             
-            return 0;
+        search.heuristic_cost = [current_board](const Board &board) { 
+            switch (TicTacToe::status(board)) {
+                case TicTacToe::Status::Winner:
+                    return TicTacToe::winner(board) == current_board.active ? -1000 : 1000;
+                case TicTacToe::Status::Tie:
+                    return -500;
+                case TicTacToe::Status::Playing:
+                    return 0;
+            }
         };
         
-        auto best = clairvoyant.best(board, completed, cost_function, cost_heuristic);
-        std::cout << "5.2";
-        return best;
+        search.completed = [current_board](const Board &board) {
+            switch (TicTacToe::status(board)) {
+                case TicTacToe::Status::Winner:
+                    return TicTacToe::winner(board) == current_board.active;
+                case TicTacToe::Status::Tie:
+                    return false;
+                case TicTacToe::Status::Playing:
+                    return false;
+            }
+        };
+        
+        return clair.best(current_board, search);
     }
     
 };
@@ -216,17 +199,15 @@ int main() {
     
     TicTacToe::Status status = TicTacToe::status(board);
     
-    std::cout << "6";
-    
-    AI ai(TicTacToe::player1);
+    AI ai;
     
     do {
         std::cout << TicTacToe::board_str(board) << std::endl;
         
         TicTacToe::Move move;
-        if (board.active == ai.player) {
+        if (board.active == TicTacToe::player2) {
             std::cout << "Ai: ";
-            move = ai.next_move(board);
+            move = ai.best_move(board);
             std::cout << move << std::endl;
         }
         else {
