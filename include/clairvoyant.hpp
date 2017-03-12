@@ -18,7 +18,7 @@ namespace cvt {
         
         template inline Action best(const State &search_from, 
                                           const graph_search<State, Action, Cost>  &search = graph_search<State, Action, Cost>()) {
-            return search.min_cost_path(graph, search_from).front().first;
+            return search.path(graph, search_from).front().first;
         }
         
     };

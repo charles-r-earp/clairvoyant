@@ -21,7 +21,7 @@ int main() {
     cvt::graph_search<char> search;
     search.set_goal('A');
     
-    for (auto connection : search.min_cost_path(graph1, 'E')) {
+    for (auto connection : search.path(graph1, 'E')) {
         std::cout << connection.first.first << " -> " << connection.first.second << std::endl;
         //std::cout << " -[ " << connection.first << " ]-> " << connection.second;
     }

@@ -2,8 +2,10 @@
 
 #include <sstream>
 #include <vector>
+#include <set>
 #include <algorithm>
 #include <utility>
+#include <memory>
 
 template<typename T, int R, int C = R> using Matrix = std::array<std::array<T, C>, R>;
 
@@ -16,9 +18,9 @@ struct TicTacToe {
     static const Player player1 = 'x', player2 = 'o';
     
     enum Status {
-        Playing,
-        Winner,
-        Tie
+        Playing = 'P',
+        Winner = 'W',
+        Tie = 'T'
     };
     
     struct Board {
@@ -54,15 +56,20 @@ struct TicTacToe {
     }
     
     public: inline static std::vector<Move> legal_moves(const Board& board) {
+        
         std::vector<Move> moves;
         
-        for (auto row : board.squares) {
-            for (auto square : row) {
-                if (!(square == player1 || square == player2)) {
-                    moves.push_back(square);
+        if (TicTacToe::status(board) == TicTacToe::Status::Playing) {
+            for (auto row : board.squares) {
+                for (auto square : row) {
+                    if (!(square == player1 || square == player2)) {
+                        moves.push_back(square);
+                    }
                 }
             }
         }
+        
+       
         
         return moves;
     }
@@ -105,11 +112,15 @@ struct TicTacToe {
             if (s1 == s2 && s2 == s3) return Status::Winner;
         }
         
-        if (TicTacToe::legal_moves(board).empty()) {
-            return Status::Tie;
+        for (auto row : board.squares) {
+            for (auto s : row) {
+                if (!(s == TicTacToe::player1 || s == TicTacToe::player2)) {
+                    return Status::Playing;
+                }
+            }
         }
         
-        return Status::Playing;
+        return Status::Tie;
     }
     
     
@@ -143,50 +154,121 @@ class AI {
     using Board = TicTacToe::Board;
     using Move = TicTacToe::Move;
     using Cost = int;
-    
-    cvt::clairvoyant<cvt::dynamic_graph<Board, Move>, Cost> clair;
+    /*
+    cvt::dynamic_graph<Board, Move> graph;
     
     public: AI() {
         
-        this->clair.graph.callback = [](const Board &board){ 
-            
+        graph.callback = [](const Board &board){
+                
             auto moves = TicTacToe::legal_moves(board);
             std::vector<std::pair<Move, Board> > connections; 
-            
+
             for (auto move : moves) {
                 connections.push_back(std::make_pair(move, TicTacToe::make_move(board, move)) );
             }
-            
+
             return connections;
         };
+        
+            
+    }*/
+    
+    public: Move best_move(Board board) {
+        
+        std::set<Board> visited;
+        
+        auto moves = TicTacToe::legal_moves(board);
+        
+        // Wins
+        
+        std::cout << "Searching Wins...\n";
+        
+        for (Move move : moves) {
+            
+            Board future = this->find_win(board, move, visited);
+            
+            if (TicTacToe::status(future) == TicTacToe::Status::Winner) {
+
+                if (board.active == TicTacToe::winner(future)) {
+
+                    return move;
+                }
+                
+            }
+        
+        }
+        
+        std::cout << "Searching Draws...\n";
+        
+        // Draws
+        
+        for (Move move : moves) {
+            
+            Board future = this->find_win(board, move, visited);
+            
+            if (TicTacToe::status(future) == TicTacToe::Status::Tie) {
+
+                return move;
+                
+            }
+            
+        }
+        
+        return moves.front();
     }
     
-    public: TicTacToe::Move best_move(const TicTacToe::Board &current_board) {
-        cvt::graph_search<TicTacToe::Board, TicTacToe::Move, Cost> search;
+    Board find_win(Board board, Move move, std::set<Board> &visited) {
+        
+        if (visited.count(board)) {
+            return board;
+        }
+        
+        visited.insert(board);
+        
+        std::cout << TicTacToe::board_str(board) << std::endl;
+        
+        Board next = TicTacToe::make_move(board, move);
             
-        search.heuristic_cost = [current_board](const Board &board) { 
-            switch (TicTacToe::status(board)) {
-                case TicTacToe::Status::Winner:
-                    return TicTacToe::winner(board) == current_board.active ? -1000 : 1000;
-                case TicTacToe::Status::Tie:
-                    return -500;
-                case TicTacToe::Status::Playing:
-                    return 0;
-            }
-        };
+        if (TicTacToe::status(next) != TicTacToe::Playing) {
+            return next;
+        }
         
-        search.completed = [current_board](const Board &board) {
-            switch (TicTacToe::status(board)) {
-                case TicTacToe::Status::Winner:
-                    return TicTacToe::winner(board) == current_board.active;
-                case TicTacToe::Status::Tie:
-                    return false;
-                case TicTacToe::Status::Playing:
-                    return false;
-            }
-        };
+        auto moves = TicTacToe::legal_moves(board);
         
-        return clair.best(current_board, search);
+        // Wins
+        
+        for (Move move : moves) {
+            
+            Board future = find_win(next, move, visited);
+            
+            if (TicTacToe::status(future) == TicTacToe::Status::Winner) {
+
+                if (board.active == TicTacToe::winner(future)) {
+
+                    return future;
+                }
+                
+            }
+        }
+        /*
+        // Draws
+        
+        for (Move move : moves) {
+            
+            Board future = this->find_win(board, move);
+            
+            if (TicTacToe::status(future) == TicTacToe::Status::Tie) {
+
+                return future;
+                
+            }
+        }*/
+        
+        
+        
+        return next;
+        
     }
     
 };
@@ -223,6 +305,8 @@ int main() {
         status = TicTacToe::status(board);
         
     } while (status == TicTacToe::Status::Playing);
+    
+     std::cout << TicTacToe::board_str(board) << std::endl;
     
     switch (status) {
         

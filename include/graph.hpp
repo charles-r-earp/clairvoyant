@@ -4,6 +4,7 @@
 #include <vector>
 #include <queue>
 #include <map>
+#include <set>
 #include <utility>
 #include <tuple>
 #include <functional>
@@ -27,13 +28,32 @@ namespace cvt {
         
         std::map<Vertex, std::vector<Connection> > connections;
         
-        inline std::size_t count(const Vertex& v) const {
+        inline std::size_t count(const Vertex &v) const {
             return this->connections.count(v);
         }
         
-        inline std::vector<Connection> operator[](const Vertex &v) {
+        inline std::vector<Connection> get(const Vertex &v) {
             return this->connections[v];
         }
+        
+        inline void insert(const Vertex &v, const Connection &c) {
+            this->connections[v].push_back(c);
+        }
+        
+        /*inline std::vector<Vertex> filter(lambda::lambda<bool(Vertex)> include) {
+            std::vector<Vertex> vertices;
+            
+            for (auto kv : this->connections) {
+                if (include(kv.first)) {
+                    vertices.push_back(kv.first);
+                    for (auto c : kv.second) {
+                        vertices.push_back(c.second);
+                    }
+                }
+            }
+            
+            return vertices;
+        }*/
     };
     
     template<typename V> struct vertex_graph {
@@ -48,13 +68,34 @@ namespace cvt {
             return this->connected_vertices.count(v);
         }
         
-        inline std::vector<Connection> operator[](const Vertex &v) { 
+        inline std::vector<Connection> get(const Vertex &v) { 
             std::vector<Connection> connections;
             for (auto next : this->connected_vertices[v]) {
                 connections.push_back(std::make_pair(std::make_pair(v, next), next) );
             }
             return connections;
         }
+        
+        inline void insert(const Vertex &v, const Vertex &connected_vertex) {
+            this->connected_vertices[v].push_back(connected_vertex);
+        }
+        
+        inline void insert(const Vertex &v, const Connection &c) {
+            this->connected_vertices[v].push_back(c.second);
+        }
+        
+        /*inline std::vector<Vertex> filter(lambda::lambda<bool(Vertex)> include) {
+            std::vector<Vertex> vertices;
+            
+            for (auto kv : this->connected_vertices) {
+                if (include(kv.first)) {
+                    vertices.push_back(kv.first);
+                    vertices.insert(kv.second.begin(), kv.second.end());
+                }
+            }
+            
+            return vertices;
+        }*/
     };
     
     template<typename V, typename E> struct dynamic_graph {
@@ -66,70 +107,91 @@ namespace cvt {
         graph<Vertex, Edge> storage;
         lambda::lambda<std::vector<Connection>(Vertex)> callback;
         
-        inline std::size_t count(const Vertex& v) const {
+        inline std::size_t count(const Vertex &v) const {
             return this->storage.count(v);
         }
         
-        inline std::vector<Connection> operator[](const Vertex &v) {
+        inline void insert(const Vertex &v, const Connection &c) {
+            this->storage.insert(v, c);
+        }
+        
+        inline std::vector<Connection> get(const Vertex &v) {
             
             if (!this->count(v)) {
-                this->storage[v] = this->callback(v);
+                for(auto connection : this->callback(v)) {
+                    this->insert(v, connection);
+                }
             }
             
-            return this->storage[v];
+            return this->storage.get(v);
         }
+        
+        /*inline std::vector<Vertex> filter(lambda::lambda<bool(Vertex)> include) {
+            return this->storage.filter(include);
+        }*/
+        
     };
+    
+    template<typename Vertex, typename Edge> std::vector<std::pair<Edge, Vertex> > 
+        reconstruct_path(const std::map<Vertex, std::pair<Vertex, Edge> > &visited, Vertex current) {
+        
+        std::vector<std::pair<Edge, Vertex> > path;
+
+        while (visited.count(current)) {
+
+            auto pair = visited.at(current);
+
+            path.push_back(std::make_pair(pair.second, current) );
+
+            current = pair.first;
+        }
+
+        std::reverse(path.begin(), path.end());
+
+        return path;
+    }
     
     template<typename V, typename E = typename vertex_graph<V>::Edge, typename C = int> struct graph_search {
         
         using Vertex = V;
         using Edge = E;
         using Cost = C;
+        using Connection = typename graph<Vertex, Edge>::Connection;
         
-        lambda::lambda<bool(const Vertex&)> completed = [](const Vertex&)->bool{ return false; };
-        lambda::lambda<Cost(const Edge&)> edge_cost = [](const Edge&)->Cost{ return 1; };
-        lambda::lambda<Cost(const Vertex&)> heuristic_cost = [](const Vertex&)->Cost{ return 0; };
+        mutable lambda::lambda<bool(const Vertex&)> completed = [](const Vertex&)->bool{ return false; };
+        mutable lambda::lambda<Cost(const Edge&)> edge_cost = [](const Edge&)->Cost{ return 1; };
+        mutable lambda::lambda<Cost(const Vertex&)> heuristic_cost = [](const Vertex&)->Cost{ return 0; };
         
-        template<class Graph> std::vector<typename Graph::Connection> min_cost_path(Graph graph, const Vertex &start) const {
-            using Vertex = typename Graph::Vertex;
-            using Edge = typename Graph::Edge;
-            using Connection = typename Graph::Connection;
+        template<class Graph> bool run(Graph &graph, 
+                                  Vertex &current, 
+                                  std::map<Vertex, std::pair<Vertex, Edge> > &visited,
+                                  std::map<Vertex, Cost> &cost_map) const {
+
             using Node = std::pair<Cost, Connection>;
             
-            // construct containers
-            
             std::priority_queue<Node, std::vector<Node>, std::greater<Node> > frontier;
-            std::map<Vertex, std::pair<Vertex, Edge> > visited;
-            std::map<Vertex, Cost> cost_map;
-
-            // initialize
-
-            Vertex current = start;
-
-            bool init = false;
 
             do {
-                if (init) {
+                if (!frontier.empty()) {
                     current = frontier.top().second.second;
                     frontier.pop();
                 }
 
-                init = true;
+                if (this->completed(current)) {
+                    return true;
+                }
 
-                
-                /*if (this->completed(current)) {
-                    break;
-                }*/
-
-                for (Connection connection : graph[current]) {
+               for (Connection connection : graph.get(current)) {
 
                     Edge e = connection.first;
-                    Cost cost;// = this->edge_cost(e);
+                    Cost cost = this->edge_cost(e);
                     Vertex v = connection.second;
+                    
+                    //std::cout << " cost: " << cost << std::endl; 
 
                     if (!cost_map.count(v) || cost < cost_map.at(v)) {
 
-                        Cost heuristic;// = this->heuristic_cost(v);
+                        Cost heuristic = this->heuristic_cost(v);
                         frontier.push(std::make_pair(cost + heuristic, connection));
                         visited[v] = std::make_pair(current, e);
                         cost_map[v] = cost;
@@ -137,23 +199,21 @@ namespace cvt {
 
                 }
 
-
+                //std::cout << "End... Frontier size: " << frontier.size() << std::endl;
             } while(!frontier.empty());
+            
+            return false;
 
-            std::vector<Connection> path;
-
-            while (!same(current, start)) {
-
-                auto pair = visited.at(current);
-
-                path.push_back(std::make_pair(pair.second, current) );
-
-                current = pair.first;
-            }
-
-            std::reverse(path.begin(), path.end());
-
-            return path;
+        }
+        
+        template<typename Graph>
+        inline std::vector<Connection> path(Graph &graph, const Vertex &start) {
+            std::map<Vertex, std::pair<Vertex, Edge> > visited;
+            Vertex current = start;
+            std::map<Vertex, Cost> cost_map;
+            this->run(graph, current, visited, cost_map);
+            
+            return reconstruct_path(visited, current);
         }
 
         inline void set_goal(const Vertex &goal) {
