@@ -2,7 +2,6 @@
 #define CLAIRVOYANT_HPP
 
 #include "graph.hpp"
-#include "neural.hpp"
 
 namespace cvt {
 
