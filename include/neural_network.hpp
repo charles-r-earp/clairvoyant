@@ -1,6 +1,7 @@
 #include "math.hpp"
+#include "utility.hpp"
 
-#include <lambda>
+//#include <lambda>
 #include <vector>
 #include <algorithm>
 #include <cmath>
@@ -10,122 +11,180 @@
 
 namespace cvt {
     
-    // utility function
-    template<typename T, typename F> void _resize(std::vector<T> &v, std::size_t size, F fill) {
+    template<typename T = double> struct neuron {
         
-        std::size_t current = v.size();
-
-        if (current > size) {
-
-            v.resize(size);
-        }
-        else if (current < size) {
+        std::vector<math::auto_diff<T> > weights;
+        math::auto_diff<T> bias;
+        
+        using ActivationFunction = lambda::lambda<math::auto_diff<T>(const math::auto_diff<T>&)>;
+        
+        mutable ActivationFunction activation = [](const math::auto_diff<T>& z){
+            return T(1)/(T(1) + math::exp(-1.0*z)); 
+        };
+        
+        
+        inline math::auto_diff<T> process(const std::vector<math::auto_diff<T> >& inputs) const {
             
-            v.resize(size);
-            for_each(v.end() + current - size, v.end(), [&](const T&){ return fill(); });
-        }
-    }
-    
-    template<typename T> void _resize(std::vector<T> &v, std::size_t size) {
-        
-        _resize(v, size, [](void){ return T(); });
-    }
-    
-    template<typename T> struct neuron {
-        
-        std::vector<T> weights;
-        T bias;
-        
-        std::vector<T> last_inputs;
-        
-        mutable T learning_rate = 1;
-        mutable lambda::lambda<T(T)> activation = [](const T &z){ return 1/(1 + std::exp(-z)); };
-        
-        mutable std::default_random_engine generator;
-        mutable std::normal_distribution<T> distribution = std::normal_distribution<T>(0, 0.1);
-    
-        inline T operator()(const std::vector<T> &inputs){
+            assert(inputs.size() == this->weights.size());
             
-            // store inputs for later
-            //this->last_inputs = inputs;
-            
-            
-            // run operation
             return this->activation(math::dot(this->weights, inputs) + this->bias);
         }
         
-        inline void resize(const std::size_t &size) {
-            _resize(this->weights, size, [&](void)->T{ return distribution(generator); });
+        inline void resize(const std::size_t &size, lambda::lambda<T()> get_weight) {
+            
+            this->weights.resize(size);
+            
+            for (auto &wt : this->weights) {
+                
+                wt.value = get_weight();
+            }
         }
+        
+        inline std::vector<math::auto_diff<T> > train(const std::vector<math::auto_diff<T> > &inputs, const math::auto_diff<T> &output_diff) {
+            
+            std::vector<math::auto_diff<T> > losses(this->weights.size());
+            
+            auto loss_it = losses.begin();
+            
+            for (auto& wt : this->weights) {
+                
+                // compute partial derivative
+                wt.derivative = 1;
+                
+                wt.value -= (*(loss_it++) = this->process(inputs) * output_diff).derivative;
+                
+                wt.derivative = 0;
+            }
+            
+            // repeat for bias
+            
+            bias.derivative = 1;
+            
+            bias.value -= (this->process(inputs) * output_diff).derivative;
+            
+            bias.derivative = 0;
+            
+            return losses;
+        }
+        
+        /*inline T train(const std::vector<T>& inputs, LossFunction loss) {
+            
+            return this->train(map(inputs, [](const T& in){ return math::auto_diff<T>(in); }), loss).first().value;
+        }*/
+    
     };
 
     template<typename T> struct neuron_layer {
         
+        using LossFunction = lambda::lambda<math::auto_diff<T>(const std::vector<math::auto_diff<T> >&)>;
+        
         std::vector<neuron<T> > neurons;
         
-        std::vector<T> last_inputs;
+        std::vector<math::auto_diff<T> > saved_inputs;
         
-        inline std::vector<T> operator()(const std::vector<T> &inputs) {
+        inline std::vector<math::auto_diff<T> > process(const std::vector<math::auto_diff<T> >& inputs, bool save = false) {
             
-            // store inputs for later
-            this->last_inputs = inputs;
+            if (save) {
+                
+                this->saved_inputs = inputs;
+            }
             
-            std::vector<T> outputs;
-            outputs.reserve(this->neurons.size());
+            return {}; // map(this->neurons, [&](const neuron<T>& n){ return n.process(inputs); });
+        }
+        
+        inline void resize(const std::size_t &inputs_size, const std::size_t &size, lambda::lambda<T()> get_weight) {
             
-            for (auto n : this->neurons) {
-                outputs.push_back(n(inputs));
+            this->neurons.resize(size);
+            
+            for (auto& n : this->neurons) {
+                n.resize(inputs_size, get_weight);
+            }
+        }
+        
+        inline std::vector< std::vector<math::auto_diff<T> > > train(std::vector<math::auto_diff<T> > &output_diff) {
+            
+            assert(output_diff.size() == this->neurons.size());
+            
+            auto out_it = output_diff.begin();
+            
+            return map(this->neurons, [&](const neuron<T>& n){ return n.train(saved_inputs, *(out_it++)); });
+        }
+        
+        inline std::vector< std::vector<math::auto_diff<T> > > train(LossFunction loss) {
+            
+            auto outputs = this->process(this->saved_inputs);
+            
+            return this->train(map(outputs, [&](const math::auto_diff<T>& out){ 
+                
+                out.derivative = 1;
+                math::auto_diff<T> output_diff = loss(outputs);
+                out.derivative = 0;
+                
+                return output_diff;
+            }));
+        }
+    };
+    
+    
+    template<typename T> struct neural_network {
+        
+        using LossFunction = typename neuron_layer<T>::LossFunction;
+        
+        std::vector<neuron_layer<T> > layers;
+        
+        std::mt19937 gen;
+        mutable std::normal_distribution<T> distribution = std::normal_distribution<T>(0, 0.1);
+        
+        inline std::vector<math::auto_diff<T> > process(const std::vector<math::auto_diff<T> >& inputs, bool save = false) {
+            
+            auto outputs = inputs;
+            
+            for (auto& layer : this->layers) {
+                
+                outputs = layer.process(outputs, save);
             }
             
             return outputs;
         }
         
-        inline void resize(const std::size_t &input_size, const std::size_t &size) {
+        inline std::vector< std::vector<math::auto_diff<T> > > 
+            train(const std::vector<math::auto_diff<T> >& inputs, LossFunction loss) {
             
-            _resize(this->neurons, size);
+            // forward pass
             
-            for (auto n : this->neurons) {
-                n.resize(input_size);
-            }
-        }
-        
-    };
-    
-    template<typename T> struct neural_network {
-        
-        std::vector<neuron_layer<T> > layers;
-        
-        // shape starts with input layer, and ends with the output layer
-        // it corresponds to the number of neurons in that layer. 
-        std::vector<std::size_t> shape;
-        
-        std::vector<T> last_inputs;
-        
-        inline std::vector<T> operator()(std::vector<T> inputs) {
-        
-            // store for later
-            //this->last_inputs = inputs;
+            auto outputs = this->process(inputs, true); // saves the inputs in each layer
             
-            for (auto &layer : layers) {
-                inputs = layer(inputs);
-            }
+            // backward pass
             
-            return inputs;
+            std::vector< std::vector<math::auto_diff<T> > > auto_diff_mat;
+            
+            /*
+            for (auto& layer : backwards(this->layers)) {
+                
+                if (!auto_diff_mat.size()) {
+                    auto_diff_mat = layer.train(loss);
+                }
+                else {
+                    auto_diff_mat = layer.train(auto_diff_mat);
+                }
+            }*/
+            
+            return auto_diff_mat;
         }
         
         inline void reshape(const std::vector<std::size_t> &shape) {
             
-            // resize layers vector to match shape
-            _resize(this->layers, this->shape.size());
+            // shape is number of inputs, then the number of neurons for each layer
             
-            // shape iterator
-            auto shape_it = this->shape.begin();
+            // resize layers vector to match shape
+            this->layers.resize(shape.size());
+            
+            auto shape_it = shape.begin();
             
             for (auto &layer : this->layers) {
                 
-                layer.resize(*shape_it, *(shape_it+1)); 
+                layer.resize(*shape_it, *(++shape_it), [&](){ return distribution(gen); }); 
                 
-                ++shape_it;
             }
         }
         

@@ -6,18 +6,19 @@
 int main () {
     
     std::mt19937 gen;
-    std::normal_distribution<double> distribution(0, 0.5);
+    std::normal_distribution<> distribution(0, 0.1);
     
-    cvt::neural_network<double> network;
-    network.reshape({2, 1});
+    
+    cvt::neuron<double> neuron;
+    neuron.resize(2, [&](){ return distribution(gen); });
     
     auto line = [](const double &x){ return x + 1; };
     auto func = [&](const double &x, const double &y)->double{ return y > line(x) ? 1 : 0; };
     
     double x, y;
 
-    auto loss = [&](const std::vector<cvt::math::auto_diff<double> >& outputs){
-        return  cvt::math::sum_of_squares(subtract(outputs, {func(x, y)}) );
+    auto loss = [&](const cvt::math::auto_diff<double>& output){
+        return 1/2.0* cvt::math::pow(output - cvt::math::auto_diff<double>( func(x, y) ), 2.0); 
     };
     
     while (true) {
@@ -29,8 +30,11 @@ int main () {
 
             x = distribution(gen);
             y = distribution(gen);
+
+            auto output = neuron.process( {x, y} );
+            output.derivative = 1;
             
-            network.train({x, y}, loss);
+            neuron.train( {x, y}, loss( output ) );
 
         }
 
@@ -43,7 +47,7 @@ int main () {
             x = distribution(gen);
             y = distribution(gen);
 
-            sum += loss( network.process({x, y}) ).value;
+            sum += loss( neuron.process({x, y}) ).value;
         }
 
         std::cout << "Mean: " << sum/U << std::endl;
