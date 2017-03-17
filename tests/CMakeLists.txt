@@ -1,2 +1,5 @@
 add_executable(test_lambda test_lambda.cpp)
 add_executable(test_graph test_graph.cpp)
+add_executable(test_neuron test_neuron.cpp)
+add_executable(test_neural_network test_neural_network.cpp)
+add_executable(test_auto_diff test_auto_diff.cpp)
