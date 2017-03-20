@@ -6,9 +6,9 @@
 
 namespace cvt {
 
-    template<typename T> std::vector<T> map(const std::vector<T>& items, lambda::lambda<T(const T&)> func) {
+    template<typename T1, typename T2> std::vector<T2> map(const std::vector<T1>& items, lambda::lambda<T2(T1&)> func) {
         
-        std::vector<T> mapped(items.size);
+        std::vector<T2> mapped(items.size);
         
         auto mapped_it = mapped.begin();
         
@@ -25,8 +25,8 @@ namespace cvt {
         
         public:
             explicit iterate_backwards(T &t) : t(t) {}
-            typename T::reverse_iterator begin() const { return t.rbegin(); }
-            typename T::reverse_iterator end()   const { return t.rend(); }
+            typename T::reverse_iterator begin() { return t.rbegin(); }
+            typename T::reverse_iterator end() { return t.rend(); }
         private:
             const T &t;
     };
