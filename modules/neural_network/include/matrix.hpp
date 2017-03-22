@@ -34,11 +34,16 @@ namespace cvt {
         inline const auto_double& real(const auto_double& x)  { return x; }
         inline auto_double imag(const auto_double&)    { return 0.; }
         //inline auto_double abs(const auto_double&  x)  { return abs(x); }
-        inline auto_double abs2(const auto_double& x)  { return x*x; }
+        inline auto_double abs2(const auto_double& x)  { return x*x; };
         
         
         using auto_matrix = Eigen::Matrix<auto_double, Eigen::Dynamic, Eigen::Dynamic>;
         using auto_vector = Eigen::Matrix<auto_double, Eigen::Dynamic, 1>;
+        
+        inline auto_double variance(const auto_vector& v) {
+        
+            return v.dot(v)/v.size() - pow(v.mean(), 2.0);
+        }
     }
 }
 

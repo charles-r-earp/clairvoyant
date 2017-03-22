@@ -29,7 +29,9 @@ namespace cvt {
                 auto result = func();
                 this->derivative = 0;
                 
-                std::cout << " partial(" << *this << ")= " << result << std::endl;
+                
+                //if (isnan(result.value) || isnan(result.derivative))
+                //std::cout << " partial(" << *this << ")= " << result << std::endl;
             
                 return result;
             }
@@ -93,10 +95,26 @@ namespace cvt {
         
         inline auto_double operator/(const auto_double& lhs, const auto_double& rhs) {
             
+            //std::cout << lhs << " / " << rhs << std::endl;
+            
             auto_double result;
             
             result.value = lhs.value / rhs.value;
             result.derivative = (lhs.derivative * rhs.value - lhs.value * rhs.derivative)/(rhs.value * rhs.value);
+            
+            //assert(!isnan(result.value));
+            //assert(!isnan(result.derivative));
+            
+            if (isnan(result.value)) {
+            
+                result.value = std::nexttoward(0, lhs.value > 0 ? 1 : -1);
+            }
+            
+            if (isnan(result.derivative)) {
+            
+                result.derivative = std::nexttoward(0, lhs.value > 0 ? 1 : -1);
+            }
+            
             
             return result;
         }
@@ -116,6 +134,11 @@ namespace cvt {
                              
             
             return result;
+        }
+        
+        inline auto_double sqrt(const auto_double& x) {
+        
+            return pow(x, 0.5);
         }
         
         inline auto_double exp(const auto_double& exp) {
@@ -154,6 +177,35 @@ namespace cvt {
             
             result.value = std::max(a.value, b.value);
             result.derivative = a.derivative * (a.value >= b.value ? 1 : 0) + b.derivative * (b.value >= a.value ? 1 : 0);
+            
+            return result;
+        }
+        
+        inline auto_double tan(const auto_double& x) {
+        
+            auto_double result;
+            
+            result.value = std::tan(x.value);
+            
+            return result;
+        }
+        
+        inline auto_double atan(const auto_double& x) {
+        
+            auto_double result;
+            
+            result.value = std::atan(x.value);
+            result.derivative = x.derivative /(x.value*x.value + 1);
+            
+            return result;
+        }
+        
+        inline auto_double tanh(const auto_double& x) {
+        
+            auto_double result;
+            
+            result.value = std::tanh(x.value);
+            result.derivative = x.derivative * std::pow(std::cosh(x.value), -2);
             
             return result;
         }

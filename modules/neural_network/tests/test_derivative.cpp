@@ -6,19 +6,19 @@ int main() {
     
     using cvt::neural_network::auto_double;
     
-    auto_double x = 1;
+    auto_double x = -881.203;
     
     auto func = [&](){ 
         
         using cvt::neural_network::log;
         using cvt::neural_network::exp;
     
-        return log(1 + exp(x));
+        return 1/(1 + exp(-x));
     };
     
     
     
-    std::cout << " softplus(x) at x = " << x << " => " << x.partial(func) << std::endl;
+    std::cout << " sigmoid at x = " << x << " => " << x.partial(func) << std::endl;
     
     return 0;
 }

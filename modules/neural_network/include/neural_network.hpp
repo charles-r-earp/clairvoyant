@@ -8,10 +8,16 @@ namespace cvt {
     
     namespace neural_network {
         
+        double clamp(double val, double min, double max) {
+        
+            return std::min(std::max(val, min), max);
+        }
+        
         struct neuron {
         
             auto_vector weights;
             auto_double bias;
+            mutable double learning_rate = 0.05;
             
             lambda::lambda<auto_double(const auto_double&)> activation;
             lambda::lambda<bool(void)> func;
@@ -22,43 +28,68 @@ namespace cvt {
                 
                 for (int i = 0; i < this->weights.size(); ++i) {
                     
-                    *(this->weights.data()+i) = get_weight();
+                    this->weights(i, 0) = get_weight();
                 }
             }
             
             auto_double process(const auto_vector& inputs) {
                 
-                std::cout << "neuron process inputs: " << inputs << std::endl;
+                for (int i = 0; i < inputs.size(); ++i) {
+                
+                    assert(!isnan(inputs(i, 0).value));
+                    assert(!isnan(this->weights(i, 0).value));
+                    assert(!isnan(this->weights(i, 0).derivative));
+                }
+                
+                assert(!isnan(this->bias.value));
+                
+                //std::cout << "neuron process inputs: " << inputs << std::endl;
+                
+                //std::cout << "neuron.process wts " << this->weights << std::endl;
                 
                 auto_double result = this->activation(this->weights.dot(inputs) + this->bias);
                 
-                std::cout << "neuron process result: " << result << std::endl;
+               // std::cout << "neuron process result: " << result << std::endl;
                 
                 return result;
             }
             
             auto_vector train(const auto_vector& inputs, const auto_double& loss) {
                 
-                std::cout << "neuron.train wts " << this->weights << std::endl;
+                assert(!isnan(loss.derivative));
                 
-                std::cout << "loss: " << loss << std::endl;
+                //std::cout << "neuron.train wts " << this->weights << std::endl;
+                
+                //std::cout << "loss: " << loss << std::endl;
             
                 auto_vector gradient(inputs.size());
                 
-                std::cout << "gradient: " << gradient << std::endl;
+                //std::cout << "gradient: " << gradient << std::endl;
                 
                 auto func = [&](){ return this->process(inputs); };
                 
                 for (int i = 0; i < this->weights.size(); ++i) {
+                    
+                    //std::cout << "partial of weights: " << this->weights(i, 0).partial(func) << std::endl;
+                    
+                    //std::cout << "wt: " << this->weights(i, 0) << std::endl;
+                    
+                    auto_double par = this->weights(i, 0).partial(func);
+                    
+                    //assert(!isnan(par.derivative));
                 
                     gradient(i, 0).derivative = inputs(i, 0).value * this->weights(i, 0).partial(func).derivative * loss.derivative;
                     
-                    std::cout << " gradient: " << gradient(i, 0) << " loss: " << loss << std::endl;
+                    //std::cout << "par: " << par << " gradient: " << gradient(i, 0) << " loss: " << loss << std::endl;
                     
-                    this->weights(i, 0).value -= gradient(i, 0).derivative;
+                    this->weights(i, 0).value = clamp(this->weights(i, 0).value - gradient(i, 0).derivative, -100, 100);
+                    //this->weights(i, 0).value -= clamp(gradient(i, 0).derivative, -10, 10);
+                    
+                    assert(!isnan(this->weights(i, 0).value));
                 }
                 
-                //this->bias.value -= this->bias.partial(func).derivative * loss.derivative;
+                //this->bias.value -= this->learning_rate * this->bias.partial(func).derivative * loss.derivative;
+                //this->bias.value -= clamp(this->bias.partial(func).derivative * loss.derivative, -10, 10);
                 
                 return gradient;
             }
@@ -84,9 +115,9 @@ namespace cvt {
             
             auto_vector process(const auto_vector& inputs, bool save = false) {
                 
-                std::cout << "layer process inputs: " << inputs << std::endl;
+                //std::cout << "layer process inputs: " << inputs << std::endl;
                 
-                std::cout << "size: " << this->neurons.size() << std::endl;
+                //std::cout << "size: " << this->neurons.size() << std::endl;
                 
                 assert(inputs.size() == this->num_inputs);
                 
@@ -97,30 +128,30 @@ namespace cvt {
                 
                 auto_vector result(this->neurons.size(), 1);
                 
-                std::cout << "result created: " << result << std::endl;
+                //std::cout << "result created: " << result << std::endl;
                 
                 int i = 0;
                 
                 for (auto& n : this->neurons) {
                     
-                    std::cout << "loop i: " << i << std::endl;
+                    //std::cout << "loop i: " << i << std::endl;
                     auto_double val = n.process(inputs);
                     
-                    std::cout << "val: " << val << std::endl;
+                    //std::cout << "val: " << val << std::endl;
                     
                     result(i, 0) = val;
                     
                     ++i;
                 }
                 
-                std::cout << "layer process result: " << result << std::endl;
+                //std::cout << "layer process result: " << result << std::endl;
                 
                 return result;
             }
             
             auto_vector train(const auto_vector& losses) {
                 
-                std::cout << "num_inputs " << this->num_inputs << std::endl;
+                //std::cout << "num_inputs " << this->num_inputs << std::endl;
                 
                 assert(losses.rows() == this->neurons.size());
                 
@@ -156,8 +187,11 @@ namespace cvt {
             
             void reshape(const Eigen::VectorXi& shape, lambda::lambda<double()> get_weight) {
                 
+                assert(shape.cols() == 1);
+                assert(shape.rows() > 1);
+                
                 this->layers.resize(shape.size()-1);
-            
+                
                 int i = 0;
                 
                 int num_inputs, num_neurons;
@@ -176,7 +210,18 @@ namespace cvt {
             
             auto_vector process(const auto_vector& inputs, bool save = false) {
                 
-                auto_vector outputs = inputs;
+                // standardize inputs
+                //auto_double mean = inputs.mean();
+                //auto_double std_dev = sqrt(variance(inputs));
+                
+                //std::cout << "mean : " << mean << " std_dev: " << std_dev << std::endl;
+                
+                auto_vector outputs(inputs.size(), 1);
+                
+                for (int i = 0; i < outputs.size(); ++i) {
+                
+                    outputs(i, 0) = inputs(i, 0);
+                }
                 
                 for (auto& layer : this->layers) {
                     
@@ -185,16 +230,23 @@ namespace cvt {
                 
                 //std::cout << "network return outputs: " << outputs << std::endl;
                 
+                // rescale outputs
+                
+                for (int i = 0; i < outputs.size(); ++i) {
+                
+                    outputs(i, 0) = outputs(i, 0);
+                }
+                
                 return outputs;
             }
             
             void train(const auto_vector& inputs, const auto_vector& target) {
                 
-                std::cout << "network train inputs: " << inputs << std::endl;
+                //std::cout << "network train inputs: " << inputs << " target: " << target << std::endl;
                 
                 auto_vector outputs = this->process(inputs, true);
                 
-                std::cout << "network train outputs: " << outputs << std::endl;
+                //std::cout << "network train outputs: " << outputs << std::endl;
                 
                 auto_vector losses(target.size(), 1);
                 
@@ -203,7 +255,7 @@ namespace cvt {
                     losses(i, 0) = outputs(i, 0).partial([&]{ return this->loss(outputs, target); } );
                 }
                 
-                std::cout << "network train losses: " << losses << std::endl;
+                //std::cout << "network train losses: " << losses << std::endl;
                 
                 std::reverse(this->layers.begin(), this->layers.end());
                 
