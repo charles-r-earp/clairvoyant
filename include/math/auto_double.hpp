@@ -1,0 +1,210 @@
+#ifndef CLAIRVOYANT_MATH_AUTO_DOUBLE_HPP
+#define CLAIRVOYANT_MATH_AUTO_DOUBLE_HPP
+
+#include <lambda.hpp>
+#include <cmath>
+#include <iostream>
+
+namespace cvt {
+
+    struct auto_double {
+            
+        double value, derivative;
+            
+        auto_double(double value = 0, double derivative = 0) {
+
+            this->value = value;
+            this->derivative = derivative;
+        }
+
+        double partial(lambda::lambda<auto_double()> func) {
+
+            this->derivative = 1;
+            auto result = func();
+            this->derivative = 0;
+
+            return result.value;
+        }
+
+        friend inline std::ostream& operator<<(std::ostream& os, const auto_double& ad) {
+
+            return (os << ad.value << "|" << ad.derivative);
+        }
+
+    };
+    
+    inline bool operator==(const auto_double& lhs, const auto_double& rhs) {
+    
+        return (lhs.value == rhs.value && lhs.derivative == rhs.derivative);
+    }
+
+    inline auto_double operator+(const auto_double& lhs, const auto_double& rhs) {
+
+        auto_double result;
+
+        result.value = lhs.value + rhs.value;
+        result.derivative = lhs.derivative + rhs.derivative;
+
+        return result;
+    }
+
+    inline auto_double operator+=(auto_double& lhs, const auto_double& rhs) {
+
+        return lhs = lhs + rhs;
+    }
+
+    inline auto_double operator-(const auto_double& lhs, const auto_double& rhs) {
+
+        auto_double result;
+
+        result.value = lhs.value - rhs.value;
+        result.derivative = lhs.derivative - rhs.derivative;
+
+        return result;
+    }
+
+    inline auto_double operator-=(auto_double& lhs, const auto_double& rhs) {
+
+        return lhs = lhs - rhs;
+    }
+
+    inline auto_double operator-(const auto_double& rhs) {
+
+        auto_double result;
+
+        result.value = -rhs.value;
+        result.derivative = -rhs.derivative;
+
+        return result;
+    }
+
+    inline auto_double operator*(const auto_double& lhs, const auto_double& rhs) {
+
+        auto_double result;
+
+        result.value = lhs.value * rhs.value;
+        result.derivative = lhs.derivative * rhs.value  + lhs.value * rhs.derivative;
+
+        return result;
+    }
+
+    inline auto_double operator/(const auto_double& lhs, const auto_double& rhs) {
+
+        //std::cout << lhs << " / " << rhs << std::endl;
+
+        auto_double result;
+
+        result.value = lhs.value / rhs.value;
+        result.derivative = (lhs.derivative * rhs.value - lhs.value * rhs.derivative)/(rhs.value * rhs.value);
+
+        //assert(!isnan(result.value));
+        //assert(!isnan(result.derivative));
+
+        if (isnan(result.value)) {
+
+            result.value = std::nexttoward(0, lhs.value > 0 ? 1 : -1);
+        }
+
+        if (isnan(result.derivative)) {
+
+            result.derivative = std::nexttoward(0, lhs.value > 0 ? 1 : -1);
+        }
+
+
+        return result;
+    }
+
+    inline auto_double pow(const auto_double& base, const auto_double& exp) {
+
+        auto_double result;
+
+        result.value = std::pow(base.value, exp.value);
+        result.derivative = base.derivative * exp.value * std::pow(base.value, exp.value - 1);
+
+        if (exp.derivative != 0) {
+
+            assert(base.value > 0);
+            result.derivative += exp.derivative * std::pow(base.value, exp.value) * std::log(base.value);
+        }
+
+
+        return result;
+    }
+
+    inline auto_double sqrt(const auto_double& x) {
+
+        return pow(x, 0.5);
+    }
+
+    inline auto_double exp(const auto_double& exp) {
+
+        auto_double result;
+
+        result.value = std::exp(exp.value);
+        result.derivative = exp.derivative * std::exp(exp.value);
+
+        return result;
+    }
+
+    inline auto_double log(const auto_double& x) {
+
+        auto_double result;
+
+        result.value = std::log(x.value);
+        result.derivative = x.derivative/x.value;
+
+        return result;
+    }
+
+    inline auto_double abs(const auto_double& val) {
+
+        auto_double result;
+
+        result.value = std::abs(val.value);
+        result.derivative = std::abs(val.derivative);
+
+        return result;
+    }
+
+    inline auto_double max(const auto_double& a, const auto_double& b) {
+
+        auto_double result;
+
+        result.value = std::max(a.value, b.value);
+        result.derivative = a.derivative * (a.value >= b.value ? 1 : 0) + b.derivative * (b.value >= a.value ? 1 : 0);
+
+        return result;
+    }
+
+    inline auto_double tan(const auto_double& x) {
+
+        auto_double result;
+
+        result.value = std::tan(x.value);
+
+        return result;
+    }
+
+    inline auto_double atan(const auto_double& x) {
+
+        auto_double result;
+
+        result.value = std::atan(x.value);
+        result.derivative = x.derivative /(x.value*x.value + 1);
+
+        return result;
+    }
+
+    inline auto_double tanh(const auto_double& x) {
+
+        auto_double result;
+
+        result.value = std::tanh(x.value);
+        result.derivative = x.derivative * std::pow(std::cosh(x.value), -2);
+
+        return result;
+    }
+ 
+}
+
+#endif // CLAIRVOYANT_MATH_AUTO_DOUBLE_HPP

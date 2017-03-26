@@ -1,5 +1,5 @@
-add_executable(test_lambda test_lambda.cpp)
-add_executable(test_graph test_graph.cpp)
-add_executable(test_neuron test_neuron.cpp)
 add_executable(test_neural_network test_neural_network.cpp)
-add_executable(test_auto_diff test_auto_diff.cpp)
+target_link_libraries(test_neural_network clairvoyant)
+
+add_executable(test_eigen test_eigen.cpp)
+target_link_libraries(test_eigen clairvoyant)

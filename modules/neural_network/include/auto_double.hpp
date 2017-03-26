@@ -9,9 +9,6 @@ namespace cvt {
 
     namespace neural_network {
         
-        //class auto_double;
-        //const auto_double e = 2.7182818284590452353602875, pi = 3.1415926535897932384626, one = 1.0, two = 2.0;
-        
         
         struct auto_double {
             

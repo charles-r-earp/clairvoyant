@@ -1,7 +1,7 @@
-#ifndef CLAIRVOYANT_HPP
-#define CLAIRVOYANT_HPP
+#ifndef CLAIRVOYANT_CLAIRVOYANT_HPP
+#define CLAIRVOYANT_CLAIRVOYANT_HPP
 
-#include "graph.hpp"
+#include "math.hpp"
+#include "neural_network.hpp"
 
-
-#endif // CLAIRVOYANT_H
+#endif // CLAIRVOYANT_CLAIRVOYANT_HPP
