@@ -16,6 +16,3 @@ target_link_libraries(clairvoyant INTERFACE Eigen3::Eigen)
 # Tests
 
 add_subdirectory(tests)
-
-#add_executable(test_neural_network tests/test_neural_network.cpp)
-#target_link_libraries(test_neural_network clairvoyant)

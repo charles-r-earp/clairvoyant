@@ -1,5 +1,11 @@
 add_executable(test_neural_network test_neural_network.cpp)
 target_link_libraries(test_neural_network clairvoyant)
 
-add_executable(test_eigen test_eigen.cpp)
-target_link_libraries(test_eigen clairvoyant)
+add_executable(test_adouble test_adouble.cpp)
+target_link_libraries(test_adouble clairvoyant)
+
+add_executable(test_nn_sin test_nn_sin.cpp)
+target_link_libraries(test_nn_sin clairvoyant)
+
+add_executable(test_mnist test_mnist.cpp)
+target_link_libraries(test_mnist clairvoyant)
